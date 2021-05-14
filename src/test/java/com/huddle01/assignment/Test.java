@@ -1,13 +1,7 @@
 package com.huddle01.assignment;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -16,105 +10,112 @@ import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 public class Test {
 
-	
-	public static ChromeOptions getChromeOptions() {
-		ChromeOptions options = new ChromeOptions();
-	    options.addArguments("use-fake-device-for-media-stream");
-	    options.addArguments("use-fake-ui-for-media-stream");
-	    
-	    return options;
-	    
-	}
-	
-	public static DesiredCapabilities getCapabilities() {
-		
-		Map<String, Object> prefs = new HashMap<String, Object>();
-	    Map<String, Object> profile = new HashMap<String, Object>();
-	    Map<String, Object> contentSettings = new HashMap<String, Object>();
-	    ChromeOptions options = getChromeOptions();
-	    // SET CHROME OPTIONS
-	    // 0 - Default, 1 - Allow, 2 - Block
-	    contentSettings.put("notifications", 2);
-	    profile.put("managed_default_content_settings", contentSettings);
-	    prefs.put("profile", profile);
-	    options.setExperimentalOption("prefs", prefs);
-	    
-	    DesiredCapabilities caps = new DesiredCapabilities();
-	    
-	    caps.setCapability(ChromeOptions.CAPABILITY, options);
-	    
-	    return caps;
-		
-	}
-	
-	public static WebDriver getChromeWebDriver(DesiredCapabilities capabilities) {
-		
-		@SuppressWarnings("deprecation")
-		WebDriver driver=new ChromeDriver(capabilities); 
-		
-		return driver;
-	}
-	
-	public static void loginUserOne(WebDriver driver) {
-		
-	}
-	public static void main(String[] args) throws InterruptedException {
+    static {
+        System.setProperty("webdriver.chrome.driver", "src/main/resources/driver/chromedriver");
+    }
 
-		String chromedriverPath = System.getProperty("user.dir")+"/src/test/resources/drivers/chromedriver";
+    public static ChromeOptions getChromeOptions() {
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("use-fake-device-for-media-stream");
+        options.addArguments("use-fake-ui-for-media-stream");
+        return options;
+    }
 
-		System.setProperty("webdriver.chrome.driver", chromedriverPath);  
-		
-		@SuppressWarnings("deprecation")
-		WebDriver driver=getChromeWebDriver(getCapabilities());
-		driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
-		driver.manage().window().maximize();  
-		
-		driver.navigate().to("https://beta.huddle01.com/");  
-		
-		WebDriverWait wait = new WebDriverWait(driver,30);
-		
-		WebElement webElement = driver.findElement(By.xpath("//button[text()='Start Meeting']"));
-		webElement.click();
-		
-		
-		String meetingUrl = driver.getCurrentUrl();
-		System.out.println("meetingUrl:"+meetingUrl);
-		
-		WebDriver driver02=getChromeWebDriver(getCapabilities());
-		driver02.get(meetingUrl);
-		
-		WebElement inputBox = driver.findElement(By.xpath("//input[@placeholder='Please Enter Your Name']"));
-		//inputBox.wait(5000);
-		wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//input[@placeholder='Please Enter Your Name']")));
-		inputBox.clear();
-		inputBox.sendKeys("User1");
-		
-		WebElement enterMeetingBtn = driver.findElement(By.xpath("//button[text()='Enter Meeting']"));
-		
-		wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[text()='Enter Meeting']")));
-		enterMeetingBtn.click();
-		
-		
-		WebElement inputBox2 = driver02.findElement(By.xpath("//input[@placeholder='Please Enter Your Name']"));
-		//inputBox.wait(5000);
-		new WebDriverWait(driver02,30).until(ExpectedConditions.presenceOfElementLocated(By.xpath("//input[@placeholder='Please Enter Your Name']")));
-		inputBox2.clear();
-		inputBox2.sendKeys("User2");
-		
-		new WebDriverWait(driver02,30).until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[text()='Enter Meeting']"))).click();
-		
-		
-		WebElement imgLock = driver.findElement(By.xpath("//img[@alt='notifications' and contains(@src,'LockActive')]"));
-		imgLock.click();
+    public static DesiredCapabilities getCapabilities() {
+        Map<String, Object> prefs = new HashMap<String, Object>();
+        Map<String, Object> profile = new HashMap<String, Object>();
+        Map<String, Object> contentSettings = new HashMap<String, Object>();
+        ChromeOptions options = getChromeOptions();
+
+        contentSettings.put("notifications", 2);
+        profile.put("managed_default_content_settings", contentSettings);
+        prefs.put("profile", profile);
+        options.setExperimentalOption("prefs", prefs);
+
+        DesiredCapabilities caps = new DesiredCapabilities();
+        caps.setCapability(ChromeOptions.CAPABILITY, options);
+        return caps;
+    }
+
+    public static void main(String[] args) {
+        String url = "https://beta.huddle01.com/", meetingUrl;
+        WebDriver driver_1 = null, driver_2 = null;
+
+        try {
+            // Init Browser 1
+            driver_1 = getChromeWebDriver(getCapabilities());
+            driver_1.navigate().to(url);
+            clickOnStartMeeting(driver_1);
+            System.out.println("meetingUrl:" + (meetingUrl = driver_1.getCurrentUrl())); // Get meeting link
+            System.out.println("Browser 1 initialized..");
+
+            // Login User 1
+            loginUser(driver_1, "User1");
+
+            // Init Browser 2
+            driver_2 = getChromeWebDriver(getCapabilities());
+            System.out.println("Browser 2 initialized..");
+            driver_2.navigate().to(meetingUrl);
+
+            // Login User 2
+            loginUser(driver_2, "User2");
+
+            // Accept User2 invitation
+            admitAllUsers(driver_1);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            driver_1.quit();
+            driver_2.quit();
+        }
+    }
+
+    public static void clickOnStartMeeting(WebDriver driver) {
+        driver.findElement(By.xpath("//button[text()='Start Meeting']")).click();
+        System.out.println("Clicked on Start Meeting.");
+    }
+
+    public static void loginUser(WebDriver driver, String userName) {
+        WebDriverWait wait = new WebDriverWait(driver, 30);
+        WebElement inputBox = driver.findElement(By.xpath("//input[@placeholder='Please Enter Your Name']"));
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//input[@placeholder='Please Enter Your Name']")));
+        inputBox.clear();
+        inputBox.sendKeys("");
+        inputBox.sendKeys(userName);
+
+        WebElement enterMeetingBtn = driver.findElement(By.xpath("//button[text()='Enter Meeting']"));
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//button[text()='Enter Meeting']")));
+        enterMeetingBtn.click();
+
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return;
+    }
+    
+    public static void admitAllUsers(WebDriver driver) {
+        WebElement imgLock = driver.findElement(By.xpath("//img[@alt='notifications' and contains(@src,'LockActive')]"));
+        imgLock.click();
         WebElement admitAllBtn = driver.findElement(By.xpath("//button[text()='Admit All']"));
-        new WebDriverWait(driver,30).until(ExpectedConditions.visibilityOf(admitAllBtn)).click();
-        
-		
-		
-		//driver.quit();
-		 
-	}
+        new WebDriverWait(driver, 30).until(ExpectedConditions.visibilityOf(admitAllBtn)).click();
+        return;
+    }
 
+    public static WebDriver getChromeWebDriver(DesiredCapabilities capabilities) {
+        @SuppressWarnings("deprecation")
+        WebDriver driver = new ChromeDriver(capabilities);
+        driver.manage().deleteAllCookies();
+        driver.manage().timeouts().pageLoadTimeout(60000, TimeUnit.MILLISECONDS);
+        driver.manage().timeouts().implicitlyWait(1000, TimeUnit.MILLISECONDS);
+        return driver;
+    }
 }
