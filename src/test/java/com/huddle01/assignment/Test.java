@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 public class Test {
 
     static {
-        System.setProperty("webdriver.chrome.driver", "src/main/resources/driver/chromedriver");
+        System.setProperty("webdriver.chrome.driver", "src/test/resources/drivers/chromedriver");
     }
 
     public static ChromeOptions getChromeOptions() {
